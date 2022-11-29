@@ -1,18 +1,22 @@
-#Requires -PSEdition Desktop
+#Requires -PSEdition Core
+#Requires -Modules Microsoft.Graph.Identity.SignIns
 
 [CmdletBinding(SupportsShouldProcess)]
-param([switch]$NonInteractive)
+param([switch]$Force)
 
 Set-StrictMode -Version 3.0
 
-$ErrorActionPreference = 'stop'
+$ErrorActionPreference = 'Stop'
+if (!(Test-Path variable:\Confirm)) {
+    $Confirm = $false
+}
+if ($Force -and -not $Confirm) {
+    $ConfirmPreference = 'None'
+}
 
 $IsWin = [System.PlatformID]::Win32NT, [System.PlatformID]::Win32S, [System.PlatformID]::Win32Windows, [System.PlatformID]::Win32Windows, [System.PlatformID]::WinCE, [System.PlatformID]::Xbox -contains [System.Environment]::OSVersion.Platform
 if (!$IsWin) {
     Write-Error "This script is only for Windows."
-}
-if (!(Get-Command jq -ErrorAction Ignore)) {
-    Write-Error "jq is not installed. Please install it from https://stedolan.github.io/jq/download/ (or via scoop or winget)."
 }
 
 $dataDir = "$PSScriptRoot\data"
@@ -24,9 +28,6 @@ if (!(Test-Path "$dataDir")) {
 $date = Get-Date -Format yyyyMMdd
 $backupDir = "$dataDir\$date"
 if (Test-Path $backupDir) {
-    if ($NonInteractive) {
-        Write-Error "Backup directory already exists. Skipping."
-    }
     $choices = @(
         [System.Management.Automation.Host.ChoiceDescription]::new("&Yes", "Run backup and possibly overwrite existing files")
         [System.Management.Automation.Host.ChoiceDescription]::new("&No", "Do not run backup")
@@ -42,23 +43,21 @@ if (Test-Path $backupDir) {
     }
 }
 
-# tem que chamar Connect-AzureAD antes
-try {
-    Write-Verbose "Checking if connected to AAD..."
-    Get-AzureADTenantDetail | Out-Null
-} catch {
-    Connect-AzureAD
+Write-Verbose "Checking if connected to Microsoft Graph..."
+$mgContext = Get-MgContext
+if (!$mgContext -or ($mgContext.Scopes -notcontains 'Policy.Read.All')) {
+    Connect-MgGraph -Scopes 'Policy.Read.All'
 }
 
 Write-Verbose "Getting policies..."
-$policies = Get-AzureADMSConditionalAccessPolicy
+$policies = Get-MgIdentityConditionalAccessPolicy -All
 $policies | ForEach-Object {
     $policy = $_
     $displayNameSanitized = $policy.DisplayName -replace '[<>:"/\\| ?*]', '_'
     $fileName = "$backupDir\$displayNameSanitized.json"
     Write-Verbose "Writing '$fileName'..."
     if ($PSCmdlet.ShouldProcess($fileName, "Write file")) {
-        $policy | ConvertTo-Json -Depth 100 | jq | Out-File -LiteralPath $fileName -Encoding UTF8
+        $policy | ConvertTo-Json -Depth 100 | Out-File -LiteralPath $fileName -Encoding UTF8
     }
 }
 Write-Verbose "Done."
