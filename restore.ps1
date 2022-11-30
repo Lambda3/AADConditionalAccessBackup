@@ -14,11 +14,6 @@ if ($Force -and -not $Confirm) {
     $ConfirmPreference = 'None'
 }
 
-$IsWin = [System.PlatformID]::Win32NT, [System.PlatformID]::Win32S, [System.PlatformID]::Win32Windows, [System.PlatformID]::Win32Windows, [System.PlatformID]::WinCE, [System.PlatformID]::Xbox -contains [System.Environment]::OSVersion.Platform
-if (!$IsWin) {
-    Write-Error "This script is only for Windows."
-}
-
 function DeleteNullKeys([hashtable]$ht) {
     $keysToRemove = $ht.Keys | Where-Object { $null -eq $ht[$_] }
     $keysToRemove | ForEach-Object { $ht.Remove($_) }
