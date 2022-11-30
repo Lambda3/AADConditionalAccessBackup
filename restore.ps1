@@ -2,7 +2,7 @@
 #Requires -Modules Microsoft.Graph.Identity.SignIns
 
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
-param([switch]$NonInteractive, [DateTime]$Date, [switch]$Update, [switch]$Disable, [switch]$Force)
+param([switch]$NonInteractive, [DateTime]$Date, [switch]$Update, [switch]$Disable, [switch]$Force, [string]$DataDirectory)
 
 Set-StrictMode -Version 3.0
 
@@ -29,12 +29,16 @@ function DeleteNullKeys([hashtable]$ht) {
     }
 }
 
-$dataDir = "$PSScriptRoot\data"
+if ($DataDirectory) {
+    $dataDir = $DataDirectory
+} else {
+    $dataDir = "$PSScriptRoot\data"
+}
 if (!(Test-Path "$dataDir")) {
     Write-Host "No backups available."
     exit
 }
-$dateDirs = Get-ChildItem $dataDir
+[array]$dateDirs = Get-ChildItem $dataDir
 if ($dateDirs.Length -eq 0) {
     Write-Host "No backups available."
     exit

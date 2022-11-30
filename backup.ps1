@@ -2,7 +2,7 @@
 #Requires -Modules Microsoft.Graph.Identity.SignIns
 
 [CmdletBinding(SupportsShouldProcess)]
-param([switch]$Force)
+param([switch]$Force, [string]$DataDirectory)
 
 Set-StrictMode -Version 3.0
 
@@ -19,7 +19,11 @@ if (!$IsWin) {
     Write-Error "This script is only for Windows."
 }
 
-$dataDir = "$PSScriptRoot\data"
+if ($DataDirectory) {
+    $dataDir = $DataDirectory
+} else {
+    $dataDir = "$PSScriptRoot\data"
+}
 if (!(Test-Path "$dataDir")) {
     if ($PSCmdlet.ShouldProcess($dataDir, "Create directory")) {
         mkdir "$dataDir" | Out-Null
